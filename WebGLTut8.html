@@ -13,11 +13,13 @@
   varying vec2 vTextureCoord;
   varying vec3 vLightWeighting;
 
+  uniform float uAlpha;
+
   uniform sampler2D uSampler;
 
   void main(void) {
   	vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-    gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+    gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a * uAlpha);
   }
 </script>
 
@@ -70,9 +72,9 @@
 	var lastTime = 0;
 	var texture;
 	var xRot = 0;
-	var xSpeed = 0;
+	var xSpeed = 3;
   	var yRot = 0;
-  	var ySpeed = -0;
+  	var ySpeed = -3;
   	var z = -5.0;
   	var filter = 0;						//range from 0 to 2 to represent the 3 filters used on texture
   	var currentlyPressedKeys = {};
@@ -156,6 +158,7 @@
         shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
         shaderProgram.lightingDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightingDirection");
         shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
+        shaderProgram.alphaUniform = gl.getUniformLocation(shaderProgram, "uAlpha");
 	}
 
 	function handleKeyDown(event) {
@@ -194,6 +197,12 @@
 
     function degToRad(degrees) {
     	return (degrees / 180) * Math.PI;
+    }
+
+    function mvPushMatrix() {
+        var copy = mat4.create();
+        mat4.set(mvMatrix, copy);
+        mvMatrixStack.push(copy);
     }
 
     function mvPopMatrix() {
@@ -372,7 +381,7 @@
         }
 
         //IMPORTANT: image size MUST BE in POWER-OF-2!!!
-        texture.image.src = "AfricanEbonyBoards.png";
+        texture.image.src = "glass.gif";
     }
 
 	function drawScene() {
@@ -396,6 +405,18 @@
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+		var blending = document.getElementById("blending").checked;
+		if(blending) {
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+			gl.enable(gl.BLEND);
+			gl.disable(gl.DEPTH_TEST);
+			gl.uniform1f(shaderProgram.alphaUniform, parseFloat(document.getElementById("alpha").value));
+		}
+		else {
+	      gl.disable(gl.BLEND);
+	      gl.enable(gl.DEPTH_TEST);
+	    }
 
 		lighting = document.getElementById("lighting").checked;
         gl.uniform1i(shaderProgram.useLightingUniform, lighting);
@@ -479,8 +500,13 @@
 	</article></br>
 
 	<article>
-		<input type="checkbox" id="lighting" checked /> Use lighting
-	</article></br>	
+		<input type="checkbox" id="blending" checked/> Use blending</br>
+		Alpha level: <input type="text" id="alpha" value="0.5"/>		
+	</article><br>
+
+	<article>
+		<input type="checkbox" id="lighting" checked/> Use lighting
+	</article></br>
 
 	<article>
 		<h2>Controls:</h2>
